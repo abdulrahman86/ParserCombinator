@@ -39,7 +39,13 @@ object Parser extends Parsers[Parser] {
 
   override implicit def regex(r: Regex): Parser[String] = ???
 
-  override def slice[A](p: Parser[A]): Parser[String] = ???
+  override def slice[A](p: Parser[A]): Parser[String] =
+    (input) => {
+      p(input) match {
+        case Success(_, x) => Success(input.input.substring(0, x), x)
+        case x: Failure => x
+      }
+    }
 
   override def label[A](msg: String)(p: Parser[A]): Parser[A] = ???
 
