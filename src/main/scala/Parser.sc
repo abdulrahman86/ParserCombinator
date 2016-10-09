@@ -4,4 +4,4 @@ import Parser._
 run("hi")("hi i am here")
 
 //slice
-run(slice("hi"))("hi i am here")
+run(slice("hi") label("hi expected") scope("Parse Error"))("hit")

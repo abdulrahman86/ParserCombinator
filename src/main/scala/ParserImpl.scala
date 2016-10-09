@@ -9,7 +9,7 @@ object ParserType {
 
   trait Result[+A]
   case class Success[+A](get: A, charsConsumed: Int) extends Result[A]
-  case class Failure(get: ParseError) extends Result[Nothing]
+  case class Failure(get: ParseError, isCommitted: Boolean = true) extends Result[Nothing]
 }
 
 object Parser extends Parsers[Parser] {
@@ -18,22 +18,32 @@ object Parser extends Parsers[Parser] {
 
   override def run[A](p: Parser[A])(input: String): Either[ParseError, A] = p(input) match {
     case Success(a, _) => Right(a)
-    case Failure(x) => Left(x)
+    case Failure(x, y) => Left(x)
   }
 
   override def flatMap[A, B](p: Parser[A])(f: (A) => Parser[B]): Parser[B] = ???
 
-  override def or[A](p1: Parser[A], p2: Parser[A]): Parser[A] = ???
+  override def or[A](p1: Parser[A], p2: Parser[A]): Parser[A] =
+    input => {
+      p1 (input) match {
+        case Failure(_, false) => p2(input)
+        case x => x
+      }
+    }
 
   override implicit def string(s: String): Parser[String] =
     input => {
-      if (input.input.startsWith(s)) Success(s, s.length)
+      if (input.input.substring(input.offset).startsWith(s)) Success(s, s.length)
       else Failure(input.toError("Expected:" + s))
     }
 
   override def errorMessage(e: ParseError): String = ???
 
-  override def scope[A](msg: String)(p: Parser[A]): Parser[A] = ???
+  override def scope[A](msg: String)(p: Parser[A]): Parser[A] =
+    input => p(input) match {
+      case Failure(x, y) => Failure((Location(input.input), msg) :: x.stack)
+      case x => x
+    }
 
   override def errorLocation(e: ParseError): Location = ???
 
@@ -47,9 +57,19 @@ object Parser extends Parsers[Parser] {
       }
     }
 
-  override def label[A](msg: String)(p: Parser[A]): Parser[A] = ???
+  override def label[A](msg: String)(p: Parser[A]): Parser[A] =
+    input => {
+      p(input) match {
+        case Failure(x, y) => Failure(x.stack.lastOption.map(_._1).map((_, msg)).toList)
+        case x => x
+      }
+    }
 
   override def wrap[A](p: =>Parser[A]): Parser[A] = ???
 
-  override def attempt[A](parser: Parser[A]): Parser[A] = ???
+  override def attempt[A](parser: Parser[A]): Parser[A] =
+    input => parser(input) match {
+      case Failure(x, _) => Failure(x, false)
+      case x => x
+    }
 }
