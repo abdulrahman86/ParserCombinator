@@ -10,7 +10,7 @@ object TestParser {
     })).get)
   }
 
-
+  //Bracket parsing
   case class Bracket(brackets: List[Bracket]) {
 
     override def toString : String =
@@ -19,7 +19,6 @@ object TestParser {
 
   def bracketParser: Parser[Bracket] =
     for(_ <- char('(') ; b <- bracketParser.many; _ <- char(')')) yield Bracket(b)
-
 
 
 }
