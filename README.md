@@ -1,7 +1,7 @@
 # Parser Combinator library using scala
 
 
-This project is library in parser combinator library in scala.
+This project is a parser combinator library in scala.
 
 ## Inspirations for this project are ##
 
