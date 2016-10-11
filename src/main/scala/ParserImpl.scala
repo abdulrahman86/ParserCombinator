@@ -7,7 +7,12 @@ import scala.util.matching.Regex
 object ParserType {
   type Parser[+A] = Location => Result[A]
 
-  trait Result[+A]
+  trait Result[+A] {
+    def advanceSuccess(n: Int) = this match {
+      case Success(x, m) => Success(x, m + n)
+      case _ => this
+    }
+  }
   case class Success[+A](get: A, charsConsumed: Int) extends Result[A]
   case class Failure(get: ParseError, isCommitted: Boolean = true) extends Result[Nothing]
 }
@@ -21,7 +26,13 @@ object Parser extends Parsers[Parser] {
     case Failure(x, y) => Left(x)
   }
 
-  override def flatMap[A, B](p: Parser[A])(f: (A) => Parser[B]): Parser[B] = ???
+  override def flatMap[A, B](p: Parser[A])(f: (A) => Parser[B]): Parser[B] =
+    input => p(input) match {
+      case Success(a, m) => {
+        f(a)(input advanceBy m)advanceSuccess m
+      }
+      case e: Failure => e
+    }
 
   override def or[A](p1: Parser[A], p2: Parser[A]): Parser[A] =
     input => {
@@ -52,7 +63,7 @@ object Parser extends Parsers[Parser] {
   override def slice[A](p: Parser[A]): Parser[String] =
     (input) => {
       p(input) match {
-        case Success(_, x) => Success(input.input.substring(0, x), x)
+        case Success(_, x) => Success(input.input.substring(input.offset, x), x)
         case x: Failure => x
       }
     }
@@ -65,11 +76,17 @@ object Parser extends Parsers[Parser] {
       }
     }
 
-  override def wrap[A](p: =>Parser[A]): Parser[A] = ???
+  override def wrap[A](p: =>Parser[A]): Parser[A] = input => p(input)
 
   override def attempt[A](parser: Parser[A]): Parser[A] =
     input => parser(input) match {
       case Failure(x, _) => Failure(x, false)
       case x => x
+    }
+
+  override def map[A, B](p: Parser[A])(f: (A) => B): Parser[B] =
+    input => p(input) match {
+      case Success(x, m) => Success(f(x), m)
+      case e: Failure => e
     }
 }

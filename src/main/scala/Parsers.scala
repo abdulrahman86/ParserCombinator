@@ -19,8 +19,8 @@ trait Parsers[Parser[+_]] {
     case 0 => succeed(List())
     case n => map2(p, listOfN(n - 1, p))(_ :: _)
   }
-  def many[A](p: Parser[A]): Parser[List[A]] = many1(p) or succeed(List())
-  def map[A, B](p: Parser[A])(f: A => B): Parser[B] = for(a <- p) yield f(a)
+  def many[A](p: Parser[A]): Parser[List[A]] = attempt(many1(p)) or succeed(List())
+  def map[A, B](p: Parser[A])(f: A => B): Parser[B]
   def succeed[A](a: A): Parser[A] = string("") map (_ => a)
   def slice[A](p: Parser[A]): Parser[String]
   def product[A, B](p1: Parser[A], p2: Parser[B]) : Parser[(A,B)] = for(a <- p1; b <- p2)yield (a,b)
@@ -67,6 +67,9 @@ object Parsers {
     }
 
     def toError(s: String) : ParseError = List((this, s))
+
+    def advanceBy(n: Int) : Location =
+      copy(offset = offset + n)
   }
 
   implicit def toParseError(a: List[(Location, String)]): ParseError = ParseError(a)
