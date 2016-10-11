@@ -14,4 +14,4 @@ Essence of Functional Programming by Philip Wadler
 
 Used parser to implement
 
--Paranthesis parsing
+*Paranthesis parsing
